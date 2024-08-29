@@ -91,9 +91,10 @@ Model-model akan diuji tanpa menggunakan TransformedTargetRegressor dan yang ked
 
   ## **2. Data Scaling**
   **Transformer**
+  
 | Technique | Action|
-| ----------------------------- | ----------- |
-| One Hot Encoding | Transformasi kolom  `Vehicle Class`, `Renew Offer Type`,`EmploymentStatus`, dan `Marital Status` yang jumlah nilai uniknya <= 10 |
+|----------------------------- | ----------- |
+|One Hot Encoding | Transformasi kolom  `Vehicle Class`, `Renew Offer Type`,`EmploymentStatus`, dan `Marital Status` yang jumlah nilai uniknya <= 10 |
 | Ordinal Encoding | Transformasi kolom  `Coverage` dan `Education` yang memiliki urutan |
   
   ## **3. Tuning**
