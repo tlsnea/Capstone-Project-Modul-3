@@ -41,6 +41,7 @@ Model yang akan diuji coba adalah
 ## **6. Evaluation Metric**
 _Metric evaluation_ yang digunakan dalam pengambilan keputusan adalah `MAE` dan `MAPE` karena dalam hal ini MAE diperlukan untuk memberikan gambaran yang mudah dipahami tentang rata-rata kesalahan dalam satuan yang sama dengan target, memberikan gambaran mengenai selisih error yang mungkin terjadi pada prediksi. MAPE digunakan untuk menilai kesalahan relatif dalam bentuk persentase. [MAPE](https://www.researchgate.net/figure/nterpretation-of-typical-MAPE-values_tbl1_257812432#:~:text=A%20MAPE%20under%2010%25%20shows,shows%20incorrect%20results%20%5B36%5D%20.) digunakan agar dapat memberikan gambaran yang mudah dipahami dalam konteks bisnis.
 
+<hr>
 
 # **B. Data Understanding**
 
@@ -59,7 +60,84 @@ _Metric evaluation_ yang digunakan dalam pengambilan keputusan adalah `MAE` dan 
 |9|Total Claim Amount|Float|Total biaya yang sudah diklaim oleh pemengang polis selama umur polis|Jumlah total klaim tinggi menunjukkan profil risiko yang lebih tinggi, yang dapat menyebabkan premi lebih tinggi atau mempengaruhi penawaran perpanjangan.|
 |10|Income|Float|Pendapatan tahunan pemegang polis|Tingkat pendapatan dapat mempengaruhi keterjangkauan premi dan jenis perlindungan yang mungkin dipilih oleh pemegang polis.|
 
+<hr>
 
+# **C. Data Preprocessing**
+- Duplicated data: 10.90%
+- No Missing Values
+- Outlier: Terdapat outlier pada kolom numerikal dengan persentase sekitar 0% - 8.89%. Dalam kasus ini, outlier dapat memberikan informasi lebih dari setiap karakter _customer_ yang beragam sehingga akan dipertahankan terlebih dahulu.
+
+<hr>
+
+# **D. Feature Engineering**
+1. **Handling Outliers**: Outliers pada kolom *Total Claim Amount* dan *Monthly Premium Auto* akan ditangani menggunakan metode *winsorizing*. Namun, pengujian juga akan dilakukan tanpa penanganan outliers untuk melihat perbandingannya.
+
+2. **Encoding**: 
+   - Fitur kategorikal seperti `Vehicle Class`, `Renew Offer Type`, `Employment Status`, dan `Marital Status` akan diencode menggunakan *One Hot Encoding* karena fitur-fitur ini tidak ordinal dan memiliki jumlah unique data yang sedikit.
+   - Fitur `Coverage` dan `Education` akan diencode menggunakan *Ordinal Encoding* karena memiliki urutan (ordinal).
+
+3. **Scaling**: 
+   - *Robust Scaler* akan digunakan untuk scaling karena efektif dalam menghadapi outliers dengan menggunakan median dan *interquartile range (IQR)*. 
+   - Selain itu, *PowerTransformer* dengan metode Yeo-Johnson akan digunakan sebagai alternatif scaling untuk mengatasi distribusi data yang skewed dan tidak normal.
+
+<hr>
+
+# **E. Machine Learning and Tuning**
+Model-model akan diuji tanpa menggunakan TransformedTargetRegressor dan yang kedua menggunakan TransformedTargetRegressor. Tujuan penggunaan TransformedTargetRegressor adalah untuk mengubah distribusi target agar lebih sesuai dengan asumsi model dengan mengatasi skewness, distribusi tidak normal, dan menstabilkan varians, menggunakan teknik Yeo-Johnson yang dapat memproses data negatif maupun positif.
+
+  ## **1. Splitting Scheme (80:20)**
+* X: features -> columns other than `Customer Lifetime Value`
+* y: target -> `Customer Lifetime Value`
+
+  ## **2. Data Scaling**
+  **Transformer**
+| Technique | Action|
+| ----------------------------- | ----------- |
+| One Hot Encoding | Transformasi kolom  `Vehicle Class`, `Renew Offer Type`,`EmploymentStatus`, dan `Marital Status` yang jumlah nilai uniknya <= 10 |
+| Ordinal Encoding | Transformasi kolom  `Coverage` dan `Education` yang memiliki urutan |
+  
+  ## **3. Tuning**
+Model|MAE Sebelum Tuning|MAE After Tuning|
+|---|---|---|
+|Gradient Boost| 1522.189114 |-1472.727|
+|Random Forest| 1547.680836 |-1561.191|
+|XGBoost| 1670.944095 |-1684.497|
+
+<hr>
+
+# **F. Conclusion & Recommendation**
+
+## **1. Conclusion**
+Berdasarkan hasil pemodelan terbaik (Gradient Boosting):
+- Score MAE Gradient Boosting Model ini adalah 1396.65 dan score MAPE Gradient Boosting Model ini adalah 8.1%. Artinya, **rata-rata kesalahan prediksi model tersebut adalah sekitar 1396.65 dalam skala data asli (dollar), dan kesalahan tersebut merupakan 8.1% dari nilai target yang sebenarnya.**
+- Waktu yang dibutuhkan untuk melatih model: 7 detik
+- `Number of Policies` dan `Monthly Premium Auto` merupakan fitur dengan korelasi tinggi dengan CLV dan paling penting dalam pemodelan ini, sehingga mempengaruhi nilai `Customer Lifetime Value`
+- Model ini memiliki limitasi yaitu hanya dapat memprediksi nilai `CLV` yang berkisaran `CLV` <**=$2596 sampai dengan $10000** dan kisaran nilai fitur sebagai berikut.
+    - `Number of Policies` antara 1 sampai dengan 9.
+    - `Monthly Premium Auto` antara 61 sampai dengan 297.
+    - `Total Claim Amount` antara 0.423310 sampai dengan 2759.794354.
+    - `Income` antara  0 sampai dengan 99934.
+    - `Vehicle Class` diencoding dengan nilai 0 atau 1 berdasarkan onehot encoding.
+    - `Coverage` diencoding dengan nilai antara 1 sampai 3.
+    - `Renew Offer Type` diencoding dengan nilai 0 atau 1 berdasarkan onehot encoding.	
+    - `EmploymentStatus` diencoding dengan nilai 0 atau 1 berdasarkan onehot encoding.	
+    - `Marital Status` diencoding dengan nilai 0 atau 1 berdasarkan onehot encoding.	
+    - `Education` diencoding dengan nilai antara 1 sampai 5.
+
+
+## **2. Recommendation**
+- Bagi perusahaan
+  - Dalam meningkatkan pendapatan perusahaan, dapat dilakukan strategi pemasaran yang berfokus dalam meningkatkan `Number of Policies` dan `Monthly Premium Auto`. Namun, perlu mempertimbangkan agar `Monthly Premium Auto` tetaap sesuai dengan faktor seperti, pendapatan, pekerjaan, pendidikan karena premi per bulan dapat menjadi faktor yang paling sensitif dan berdampak besar dalam keputusan pelanggan.
+
+- Bagian pengembangan Model Machine Learning
+  - Dapat dilakukan optimasi menggunakan `GridSearch` agar lebih banyak kombinasi yang dilakukan dalam mencari parameter terbaik.
+  - Dapat dilakukan pemodelan lain yang berfokus pada menggunakan Lasso maupun Ridge untuk `mencegah overfitting` dan `mengontrol kompleksitas model` dengan menambahkan penalti pada ukuran koefisien. Dan menjadi **pembanding model Gradient Boosting yang kompleks**. Kedua metode ini adalah bagian dari teknik yang disebut Regularisasi, sehingga dapat sekaligus dilakukan feature selection dan model menjadi lebih sederhana.
+ 
+- Untuk Dataset
+  - `Income` memiliki **nilai 0 di kuartil 25%**, yang menunjukkan ada banyak entri dengan pendapatan nol. Ini bisa menjadi masalah untuk model yang memerlukan informasi pendapatan untuk memprediksi CLV. 
+  - **Penambahan fitur yang relevan**, seperti Tenure, Discounts Used, atau Customer Engagement Metrics, bisa memperkaya dataset untuk memberi informasi lebih berkaitan dengan kondisi setiap pelanggan. 
+
+- 
 
 
 
